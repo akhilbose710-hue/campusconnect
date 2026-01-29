@@ -1,188 +1,1 @@
-require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
-
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-if (!SERVICE_KEY || !SUPABASE_URL) {
-    console.error('ERROR: Missing Supabase credentials');
-    process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false }
-});
-
-const getPasswordFromDob = (dob) => {
-    if (!dob) return 'Campus@123';
-    const [y, m, d] = dob.split('-');
-    return `${d}${m}${y}`;
-};
-
-const DEPARTMENTS = [
-    { name: 'Computer Science', code: 'CS' },
-    { name: 'Electronics', code: 'EC' },
-    { name: 'Mechanical Engineering', code: 'ME' },
-    { name: 'Civil Engineering', code: 'CE' },
-    { name: 'Mathematics', code: 'MA' }
-];
-
-const ADMIN_USER = {
-    email: 'admin@campus.com',
-    name: 'Root Admin',
-    password: 'admin',
-    roles: ['SUPER_ADMIN'],
-    metadata: { departmentCode: 'IT' }
-};
-
-const STUDENTS = [
-    { email: 'student1@campus.com', name: 'Arjun Das', dob: '2004-05-10', dept: 'CS', admission: '2024CS01', sem: 'S4' },
-    { email: 'student2@campus.com', name: 'Sneha Nair', dob: '2004-08-22', dept: 'ME', admission: '2024ME05', sem: 'S4' },
-    { email: 'student3@campus.com', name: 'Rahul Varma', dob: '2005-01-15', dept: 'EC', admission: '2024EC12', sem: 'S2' },
-    { email: 'student4@campus.com', name: 'Anjali Menon', dob: '2004-12-05', dept: 'CE', admission: '2024CE08', sem: 'S4' },
-    { email: 'student5@campus.com', name: 'Kiran Joseph', dob: '2003-11-30', dept: 'CS', admission: '2024CS02', sem: 'S6' }
-];
-
-const STAFF = [
-    { email: 'staff1@campus.com', name: 'Dr. Ramesh Kumar', dob: '1975-04-12', dept: 'CS', staffId: 'CS-FAC-01' },
-    { email: 'staff2@campus.com', name: 'Prof. Lakshmi Iyer', dob: '1982-09-25', dept: 'MA', staffId: 'MA-FAC-05' },
-    { email: 'staff3@campus.com', name: 'Dr. Suresh Gopi', dob: '1978-01-10', dept: 'ME', staffId: 'ME-FAC-12' },
-    { email: 'staff4@campus.com', name: 'Ms. Bindu Ravi', dob: '1985-06-18', dept: 'EC', staffId: 'EC-FAC-08' },
-    { email: 'staff5@campus.com', name: 'Dr. Vinod Pillai', dob: '1972-12-01', dept: 'CE', staffId: 'CE-FAC-02' }
-];
-
-async function seed() {
-    try {
-        console.log('--- Cleaning Environment ---');
-
-        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-        if (!listError) {
-            for (const user of users) {
-                await supabase.auth.admin.deleteUser(user.id);
-            }
-        }
-
-        const tables = ['attendance', 'students', 'staff', 'classes', 'departments', 'users'];
-        for (const table of tables) {
-            const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (error) {
-                console.warn(`Warning: Could not clean ${table}: ${error.message}`);
-                if (error.message.includes('not found')) {
-                    console.error(`FATAL: Table '${table}' or column missing in schema cache.`);
-                    console.error('PLEASE RUN THE UPDATED supabase_setup.sql WITH THE CACHE REFRESH COMMAND.');
-                    process.exit(1);
-                }
-            } else {
-                console.log(`Successfully cleaned: ${table}`);
-            }
-        }
-
-        console.log('\n--- Seeding Departments ---');
-        for (const dept of DEPARTMENTS) {
-            const { error } = await supabase.from('departments').insert([dept]);
-            if (error) console.error(`Error (Dept ${dept.code}):`, error.message);
-            else console.log(`Seeded Dept: ${dept.code}`);
-        }
-
-        console.log('\n--- Seeding Staff ---');
-        for (const s of STAFF) {
-            const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-                email: s.email,
-                password: getPasswordFromDob(s.dob),
-                email_confirm: true,
-                user_metadata: { full_name: s.name, role: 'STAFF', departmentCode: s.dept, dob: s.dob, employeeId: s.staffId },
-                app_metadata: { roles: ['STAFF'] }
-            });
-
-            if (authErr && !authErr.message.includes('already exists')) {
-                console.error(`Auth Error (${s.email}):`, authErr.message);
-                continue;
-            }
-
-            const userId = authData?.user?.id;
-            if (userId) {
-                await supabase.from('users').upsert([{ id: userId, email: s.email, full_name: s.name, roles: ['STAFF'] }]);
-                const { error: dbErr } = await supabase.from('staff').insert([{
-                    user_id: userId,
-                    staff_id: s.staffId,
-                    department: s.dept,
-                    designation: 'LECTURER'
-                }]);
-                if (dbErr) {
-                    console.error(`DB Error (Staff ID ${s.staffId}):`, dbErr.message);
-                    if (dbErr.message.includes('column')) console.error('HINT: Your Supabase API cache is outdated. Re-run SQL script.');
-                } else console.log(`Seeded Staff: ${s.email}`);
-            }
-        }
-
-        console.log('\n--- Seeding Classes ---');
-        const { data: staffData } = await supabase.from('staff').select('user_id, department');
-        const deptClasses = {};
-        for (const d of DEPARTMENTS) {
-            const tutor = staffData?.find(st => st.department === d.code);
-            const { data: cls, error: clsErr } = await supabase.from('classes').insert([{
-                name: `${d.code} S1 A`,
-                department_code: d.code,
-                tutor_id: tutor?.user_id || null,
-                semester: 1,
-                batch: 'A'
-            }]).select();
-            if (clsErr) console.error(`Error Seeding Class ${d.code}:`, clsErr.message);
-            else if (cls && cls.length > 0) {
-                deptClasses[d.code] = cls[0].id;
-                console.log(`Seeded Class: ${d.code} S1 A`);
-            }
-        }
-
-        console.log('\n--- Seeding Students ---');
-        for (const s of STUDENTS) {
-            const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-                email: s.email,
-                password: getPasswordFromDob(s.dob),
-                email_confirm: true,
-                user_metadata: { full_name: s.name, role: 'STUDENT', departmentCode: s.dept, dob: s.dob, admissionNo: s.admission },
-                app_metadata: { roles: ['STUDENT'] }
-            });
-
-            if (authErr && !authErr.message.includes('already exists')) {
-                console.error(`Auth Error (${s.email}):`, authErr.message);
-                continue;
-            }
-
-            const userId = authData?.user?.id;
-            if (userId) {
-                await supabase.from('users').upsert([{ id: userId, email: s.email, full_name: s.name, roles: ['STUDENT'] }]);
-                const { error: dbErr } = await supabase.from('students').insert([{
-                    user_id: userId,
-                    admission_number: s.admission,
-                    department: s.dept,
-                    class_id: deptClasses[s.dept] || null
-                }]);
-                if (dbErr) {
-                    console.error(`DB Error (Admission No ${s.admission}):`, dbErr.message);
-                    if (dbErr.message.includes('column')) console.error('HINT: Your Supabase API cache is outdated. Re-run SQL script.');
-                } else console.log(`Seeded Student: ${s.email}`);
-            }
-        }
-
-        console.log('\n--- Seeding Admin ---');
-        const { data: adminData, error: adminAuthErr } = await supabase.auth.admin.createUser({
-            email: ADMIN_USER.email,
-            password: ADMIN_USER.password,
-            email_confirm: true,
-            user_metadata: { full_name: ADMIN_USER.name, role: 'SUPER_ADMIN', ...ADMIN_USER.metadata },
-            app_metadata: { roles: ['SUPER_ADMIN'] }
-        });
-        const adminId = adminData?.user?.id;
-        if (adminId) {
-            await supabase.from('users').upsert([{ id: adminId, email: ADMIN_USER.email, full_name: ADMIN_USER.name, roles: ['SUPER_ADMIN'] }]);
-            console.log(`Seeded Admin: ${ADMIN_USER.email}`);
-        }
-
-        console.log('\n--- Seeding Complete Successfully ---');
-    } catch (error) {
-        console.error('Fatal Seeding Failure:', error.message);
-    }
-}
-
-seed();
+require('dotenv').config();const { createClient } = require('@supabase/supabase-js');const SUPABASE_URL = process.env.VITE_SUPABASE_URL;const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;if (!SERVICE_KEY || !SUPABASE_URL) {    console.error('ERROR: Missing Supabase credentials');    process.exit(1);}const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {    auth: { autoRefreshToken: false, persistSession: false }});const getPasswordFromDob = (dob) => {    if (!dob) return 'Campus@123';    const [y, m, d] = dob.split('-');    return `${d}${m}${y}`;};const DEPARTMENTS = [    { name: 'Computer Science', code: 'CS' },    { name: 'Electronics', code: 'EC' },    { name: 'Mechanical Engineering', code: 'ME' },    { name: 'Civil Engineering', code: 'CE' },    { name: 'Mathematics', code: 'MA' }];const ADMIN_USER = {    email: 'admin@campus.com',    name: 'Root Admin',    password: 'admin',    roles: ['SUPER_ADMIN'],    metadata: { departmentCode: 'IT' }};const STUDENTS = [    { email: 'student1@campus.com', name: 'Arjun Das', dob: '2004-05-10', dept: 'CS', admission: '2024CS01', sem: 'S4' },    { email: 'student2@campus.com', name: 'Sneha Nair', dob: '2004-08-22', dept: 'ME', admission: '2024ME05', sem: 'S4' },    { email: 'student3@campus.com', name: 'Rahul Varma', dob: '2005-01-15', dept: 'EC', admission: '2024EC12', sem: 'S2' },    { email: 'student4@campus.com', name: 'Anjali Menon', dob: '2004-12-05', dept: 'CE', admission: '2024CE08', sem: 'S4' },    { email: 'student5@campus.com', name: 'Kiran Joseph', dob: '2003-11-30', dept: 'CS', admission: '2024CS02', sem: 'S6' }];const STAFF = [    { email: 'staff1@campus.com', name: 'Dr. Ramesh Kumar', dob: '1975-04-12', dept: 'CS', staffId: 'CS-FAC-01' },    { email: 'staff2@campus.com', name: 'Prof. Lakshmi Iyer', dob: '1982-09-25', dept: 'MA', staffId: 'MA-FAC-05' },    { email: 'staff3@campus.com', name: 'Dr. Suresh Gopi', dob: '1978-01-10', dept: 'ME', staffId: 'ME-FAC-12' },    { email: 'staff4@campus.com', name: 'Ms. Bindu Ravi', dob: '1985-06-18', dept: 'EC', staffId: 'EC-FAC-08' },    { email: 'staff5@campus.com', name: 'Dr. Vinod Pillai', dob: '1972-12-01', dept: 'CE', staffId: 'CE-FAC-02' }];async function seed() {    try {        console.log('--- Cleaning Environment ---');        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();        if (!listError) {            for (const user of users) {                await supabase.auth.admin.deleteUser(user.id);            }        }        const tables = ['attendance', 'students', 'staff', 'classes', 'departments', 'users'];        for (const table of tables) {            const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');            if (error) {                console.warn(`Warning: Could not clean ${table}: ${error.message}`);                if (error.message.includes('not found')) {                    console.error(`FATAL: Table '${table}' or column missing in schema cache.`);                    console.error('PLEASE RUN THE UPDATED supabase_setup.sql WITH THE CACHE REFRESH COMMAND.');                    process.exit(1);                }            } else {                console.log(`Successfully cleaned: ${table}`);            }        }        console.log('\n--- Seeding Departments ---');        for (const dept of DEPARTMENTS) {            const { error } = await supabase.from('departments').insert([dept]);            if (error) console.error(`Error (Dept ${dept.code}):`, error.message);            else console.log(`Seeded Dept: ${dept.code}`);        }        console.log('\n--- Seeding Staff ---');        for (const s of STAFF) {            const { data: authData, error: authErr } = await supabase.auth.admin.createUser({                email: s.email,                password: getPasswordFromDob(s.dob),                email_confirm: true,                user_metadata: { full_name: s.name, role: 'STAFF', departmentCode: s.dept, dob: s.dob, employeeId: s.staffId },                app_metadata: { roles: ['STAFF'] }            });            if (authErr && !authErr.message.includes('already exists')) {                console.error(`Auth Error (${s.email}):`, authErr.message);                continue;            }            const userId = authData?.user?.id;            if (userId) {                await supabase.from('users').upsert([{ id: userId, email: s.email, full_name: s.name, roles: ['STAFF'] }]);                const { error: dbErr } = await supabase.from('staff').insert([{                    user_id: userId,                    staff_id: s.staffId,                    department: s.dept,                    designation: 'LECTURER'                }]);                if (dbErr) {                    console.error(`DB Error (Staff ID ${s.staffId}):`, dbErr.message);                    if (dbErr.message.includes('column')) console.error('HINT: Your Supabase API cache is outdated. Re-run SQL script.');                } else console.log(`Seeded Staff: ${s.email}`);            }        }        console.log('\n--- Seeding Classes ---');        const { data: staffData } = await supabase.from('staff').select('user_id, department');        const deptClasses = {};        for (const d of DEPARTMENTS) {            const tutor = staffData?.find(st => st.department === d.code);            const { data: cls, error: clsErr } = await supabase.from('classes').insert([{                name: `${d.code} S1 A`,                department_code: d.code,                tutor_id: tutor?.user_id || null,                semester: 1,                batch: 'A'            }]).select();            if (clsErr) console.error(`Error Seeding Class ${d.code}:`, clsErr.message);            else if (cls && cls.length > 0) {                deptClasses[d.code] = cls[0].id;                console.log(`Seeded Class: ${d.code} S1 A`);            }        }        console.log('\n--- Seeding Students ---');        for (const s of STUDENTS) {            const { data: authData, error: authErr } = await supabase.auth.admin.createUser({                email: s.email,                password: getPasswordFromDob(s.dob),                email_confirm: true,                user_metadata: { full_name: s.name, role: 'STUDENT', departmentCode: s.dept, dob: s.dob, admissionNo: s.admission },                app_metadata: { roles: ['STUDENT'] }            });            if (authErr && !authErr.message.includes('already exists')) {                console.error(`Auth Error (${s.email}):`, authErr.message);                continue;            }            const userId = authData?.user?.id;            if (userId) {                await supabase.from('users').upsert([{ id: userId, email: s.email, full_name: s.name, roles: ['STUDENT'] }]);                const { error: dbErr } = await supabase.from('students').insert([{                    user_id: userId,                    admission_number: s.admission,                    department: s.dept,                    class_id: deptClasses[s.dept] || null                }]);                if (dbErr) {                    console.error(`DB Error (Admission No ${s.admission}):`, dbErr.message);                    if (dbErr.message.includes('column')) console.error('HINT: Your Supabase API cache is outdated. Re-run SQL script.');                } else console.log(`Seeded Student: ${s.email}`);            }        }        console.log('\n--- Seeding Admin ---');        const { data: adminData, error: adminAuthErr } = await supabase.auth.admin.createUser({            email: ADMIN_USER.email,            password: ADMIN_USER.password,            email_confirm: true,            user_metadata: { full_name: ADMIN_USER.name, role: 'SUPER_ADMIN', ...ADMIN_USER.metadata },            app_metadata: { roles: ['SUPER_ADMIN'] }        });        const adminId = adminData?.user?.id;        if (adminId) {            await supabase.from('users').upsert([{ id: adminId, email: ADMIN_USER.email, full_name: ADMIN_USER.name, roles: ['SUPER_ADMIN'] }]);            console.log(`Seeded Admin: ${ADMIN_USER.email}`);        }        console.log('\n--- Seeding Complete Successfully ---');    } catch (error) {        console.error('Fatal Seeding Failure:', error.message);    }}seed();
