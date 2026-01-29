@@ -88,10 +88,17 @@ async function seedStudentData() {
             const { data: user } = await supabase.from('users').select('id').eq('email', map.email).single();
 
             if (user && targetClass) {
-                console.log(`Updating ${map.email} to Class ${targetClass.name}...`);
-                await supabase.from('students')
-                    .update({ class_id: targetClass.id })
+                console.log(`Updating ${map.email} to Class ${targetClass.name} and Semester ${map.sem}...`);
+                const { error: updateError } = await supabase.from('students')
+                    .update({
+                        class_id: targetClass.id,
+                        semester: map.sem // Explicitly setting semester
+                    })
                     .eq('user_id', user.id);
+
+                if (updateError) console.error(`Error updating student ${map.email}:`, updateError);
+            } else {
+                console.log(`User ${map.email} or Class not found. Please run seed_users.js first.`);
             }
         }
 

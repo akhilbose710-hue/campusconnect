@@ -229,7 +229,7 @@ export default function Layout() {
 
         <footer className="border-t border-slate-200 bg-white/60 px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
           <div className="flex items-center justify-between max-w-[1600px] mx-auto">
-            <span>© {new Date().getFullYear()} Campus Connect · Global Registry</span>
+            <span>© {new Date().getFullYear()} Campus Connect</span>
             <div className="flex gap-6">
               <Link to="/privacy" className="hover:text-primary-600 transition-colors">Privacy</Link>
               <Link to="/support" className="hover:text-primary-600 transition-colors">Support</Link>

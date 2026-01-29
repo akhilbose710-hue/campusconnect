@@ -1,1 +1,1138 @@
-import React, { useEffect, useState } from 'react';import { useSearchParams } from 'react-router-dom';import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';import { LayoutDashboard, Users, Building2, GraduationCap, Upload, Plus, UserPlus, Briefcase, Search, Filter, MoreVertical, CheckCircle, XCircle, Shield, Calendar, LogOut, ChevronRight, BookOpen, Trash2 } from 'lucide-react';const chartData = [  { month: 'Jan', users: 120 },  { month: 'Feb', users: 180 },  { month: 'Mar', users: 260 },  { month: 'Apr', users: 320 },  { month: 'May', users: 410 }];export default function SuperAdminDashboard() {  const [searchParams, setSearchParams] = useSearchParams();  const activeTab = searchParams.get('tab') || 'overview';  const setActiveTab = (tab) => {    setSearchParams({ tab });  };  const [stats, setStats] = useState({ totalUsers: 0, activeDevices: 14, attendance: '94.3%' });  const [departments, setDepartments] = useState([]);  const [staffList, setStaffList] = useState([]);  const [loading, setLoading] = useState(true);  useEffect(() => {    fetchStats();    fetchDepartments();    fetchStaff();  }, []);  const fetchStats = async () => {    try {      const response = await fetch('http://localhost:5000/api/admin/stats');      const data = await response.json();      if (data.totalUsers) {        setStats(prev => ({ ...prev, totalUsers: data.totalUsers }));      }    } catch (error) {      console.error('Failed to fetch stats:', error);    } finally {      setLoading(false);    }  };  const fetchDepartments = async () => {    try {      const response = await fetch('http://localhost:5000/api/admin/departments');      const data = await response.json();      if (data.departments) {        setDepartments(data.departments);      }    } catch (error) {      console.error('Failed to fetch departments:', error);    }  };  const fetchStaff = async () => {    try {      const response = await fetch('http://localhost:5000/api/admin/staff');      const data = await response.json();      if (data.staff) {        setStaffList(data.staff);      }    } catch (error) {      console.error('Failed to fetch staff:', error);    }  };  const tabs = [    { id: 'overview', label: 'Overview', icon: LayoutDashboard },    { id: 'users', label: 'All Users', icon: Users },    { id: 'departments', label: 'Departments', icon: Building2 },    { id: 'manage-roles', label: 'Manage Roles', icon: Shield },    { id: 'add-student', label: 'Add Student/Class', icon: GraduationCap },    { id: 'add-course', label: 'Add Course', icon: BookOpen },    { id: 'timetable', label: 'Timetable', icon: Calendar },    { id: 'add-staff', label: 'Add Staff', icon: Briefcase },    { id: 'promote', label: 'Promote Students', icon: GraduationCap },  ];  return (    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto w-full">      <div>        <h1 className="text-3xl font-bold tracking-tight text-slate-900">          {tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}        </h1>        <p className="text-slate-500 mt-1">          {activeTab === 'overview' && 'Real-time overview of your campus operations.'}          {activeTab === 'users' && 'Manage all students and staff members in one place.'}          {activeTab === 'departments' && 'Organize and manage faculty departments.'}          {activeTab === 'manage-roles' && 'Assign HOD and Principal roles to staff.'}          {activeTab === 'add-student' && 'Manage departments, classes and student registration.'}          {activeTab === 'add-course' && 'Define academic courses and subjects per department.'}          {activeTab === 'timetable' && 'Construct and manage weekly schedules for classes.'}          {activeTab === 'add-staff' && 'Onboard new faculty and administrative staff.'}          {activeTab === 'promote' && 'Perform bulk semester promotion for students.'}        </p>      </div>      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-in-out">        {activeTab === 'overview' && <OverviewTab stats={stats} />}        {activeTab === 'users' && <UsersListTab />}        {activeTab === 'departments' && <DepartmentsTab departments={departments} onUpdate={fetchDepartments} />}        {activeTab === 'manage-roles' && <ManageRolesTab departments={departments} />}        {activeTab === 'add-student' && <AddStudentTab departments={departments} staffList={staffList} />}        {activeTab === 'add-course' && <AddCourseTab departments={departments} />}        {activeTab === 'timetable' && <TimetableTab departments={departments} staffList={staffList} />}        {activeTab === 'add-staff' && <AddStaffTab departments={departments} />}        {activeTab === 'promote' && <PromoteTab />}      </div>    </div>  );}function OverviewTab({ stats }) {  return (    <div className="space-y-6">      <div className="grid gap-6 md:grid-cols-3">        <StatCard title="Total Users" value={stats.totalUsers} icon={Users} trend="+12% from last month" color="bg-blue-500" />        <StatCard title="Active Devices" value={stats.activeDevices} icon={Shield} trend="+2 new this week" color="bg-emerald-500" />        <StatCard title="Avg. Attendance" value={stats.attendance} icon={CheckCircle} trend="Consistent" color="bg-purple-500" />      </div>      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">        <div className="mb-6 flex items-center justify-between">          <div>            <h3 className="text-lg font-bold text-slate-900">User Growth</h3>            <p className="text-sm text-slate-500">New joins over the last 5 months</p>          </div>          <button className="text-sm font-medium text-primary-600 hover:text-primary-700">View Report</button>        </div>        <div className="h-80 w-full">          <ResponsiveContainer width="100%" height="100%">            <LineChart data={chartData}>              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />              <XAxis dataKey="month" tickLine={false} axisLine={false} dy={10} tick={{ fill: '#64748B', fontSize: 12 }} />              <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ stroke: '#cbd5e1' }} />              <Line type="monotone" dataKey="users" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />            </LineChart>          </ResponsiveContainer>        </div>      </div>    </div>  );}function StatCard({ title, value, icon: Icon, trend, color }) {  return (    <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all hover:shadow-md">      <div className="flex items-center justify-between mb-4">        <div className={`rounded-xl p-3 ${color} bg-opacity-10`}>          <Icon className={`h-6 w-6 ${color.replace('bg-', 'text-')}`} />        </div>        <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-1 rounded-full">30 Days</span>      </div>      <div>        <div className="text-3xl font-bold text-slate-900">{value}</div>        <div className="text-sm font-medium text-slate-500 mt-1">{title}</div>      </div>      <div className="mt-4 flex items-center text-xs text-emerald-600 font-medium">        {trend}      </div>    </div>  );}function UsersListTab() {  const [users, setUsers] = useState([]);  const [loading, setLoading] = useState(true);  const [searchTerm, setSearchTerm] = useState('');  useEffect(() => {    fetchUsers();  }, []);  const fetchUsers = async () => {    try {      const response = await fetch('http://localhost:5000/api/admin/users');      const data = await response.json();      if (data.users) {        setUsers(data.users);      }    } catch (error) {      console.error('Failed to fetch users:', error);    } finally {      setLoading(false);    }  };  const filteredUsers = users.filter(user =>    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||    user.dept.toLowerCase().includes(searchTerm.toLowerCase())  );  const handleDeleteUser = async (id, name) => {    if (!window.confirm(`Are you sure you want to remove ${name}? This will permanently delete their account.`)) return;    try {      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {        method: 'DELETE'      });      if (res.ok) {        alert('User removed successfully');        fetchUsers();      } else {        const data = await res.json();        alert('Error: ' + data.error);      }    } catch (err) {      alert('Failed to delete user');    }  };  if (loading) return <div className="text-center py-10 text-slate-500">Loading users...</div>;  return (    <div className="space-y-6">      <div className="flex flex-col sm:flex-row justify-between gap-4">        <div className="relative max-w-md flex-1">          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />          <input            type="text"            placeholder="Search users..."            value={searchTerm}            onChange={(e) => setSearchTerm(e.target.value)}            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all"          />        </div>      </div>      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">        <table className="w-full text-left text-sm">          <thead className="bg-slate-50 text-slate-500">            <tr>              <th className="px-6 py-4 font-semibold">Name</th>              <th className="px-6 py-4 font-semibold">Official ID</th>              <th className="px-6 py-4 font-semibold">Role</th>              <th className="px-6 py-4 font-semibold">Department</th>              <th className="px-6 py-4 font-semibold">Status</th>              <th className="px-6 py-4 font-semibold text-right">Actions</th>            </tr>          </thead>          <tbody className="divide-y divide-slate-100">            {filteredUsers.map((user) => (              <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">                <td className="px-6 py-4">                  <div className="flex items-center gap-3">                    <div className="h-9 w-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-xs">                      {user.name.charAt(0)}                    </div>                    <div>                      <div className="font-medium text-slate-900">{user.name}</div>                      <div className="text-xs text-slate-500">{user.email}</div>                    </div>                  </div>                </td>                <td className="px-6 py-4">                  <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded">                    {user.officialId || 'N/A'}                  </span>                </td>                <td className="px-6 py-4">                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'STUDENT' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'                    }`}>                    {user.role}                  </span>                </td>                <td className="px-6 py-4 text-slate-600">{user.dept}</td>                <td className="px-6 py-4">                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'                    }`}>                    <span className={`h-1.5 w-1.5 rounded-full ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>                    {user.status}                  </span>                </td>                <td className="px-6 py-4 text-right">                  <div className="flex justify-end gap-2">                    <button                      onClick={() => handleDeleteUser(user.id, user.name)}                      className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors"                    >                      <XCircle size={18} />                    </button>                    <button className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">                      <MoreVertical size={18} />                    </button>                  </div>                </td>              </tr>            ))}          </tbody>        </table>      </div>    </div>  );}function AddStudentTab({ departments, staffList }) {  const [view, setView] = useState('depts');  const [selectedDept, setSelectedDept] = useState(null);  const [selectedClass, setSelectedClass] = useState(null);  const [classes, setClasses] = useState([]);  const [classStudents, setClassStudents] = useState([]);  const [loading, setLoading] = useState(false);  const [formData, setFormData] = useState({    email: '', name: '', dob: '', admissionNo: ''  });  const fetchClasses = async (deptCode) => {    setLoading(true);    try {      const res = await fetch(`http://localhost:5000/api/admin/classes?departmentCode=${deptCode}`);      const data = await res.json();      setClasses(data.classes || []);    } catch (err) {      console.error(err);    } finally {      setLoading(false);    }  };  const fetchClassStudents = async (classId) => {    try {      const res = await fetch(`http://localhost:5000/api/admin/classes/${classId}/students`);      const data = await res.json();      if (data.students) setClassStudents(data.students);    } catch (err) {      console.error(err);    }  };  const handleCreateClass = async (e) => {    e.preventDefault();    const className = e.currentTarget.classNameInput.value;    const tutorId = e.currentTarget.tutorId.value;    const semester = e.currentTarget.semester.value;    const batch = e.currentTarget.batch.value;    try {      const res = await fetch('http://localhost:5000/api/admin/classes', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify({ name: className, department_code: selectedDept.code, tutor_id: tutorId || null, semester, batch })      });      if (res.ok) {        alert('Class created successfully');        e.target.reset();        fetchClasses(selectedDept.code);      } else {        const data = await res.json();        alert('Error: ' + data.error);      }    } catch (err) {      alert('Failed to create class');    }  };  const handleDeleteClass = async (classId, className) => {    if (!window.confirm(`Are you sure you want to delete class ${className}? All student enrollments for this class will be cleared.`)) return;    try {      const res = await fetch(`http://localhost:5000/api/admin/classes/${classId}`, {        method: 'DELETE'      });      if (res.ok) {        alert('Class deleted successfully');        fetchClasses(selectedDept.code);      } else {        const data = await res.json();        alert('Error: ' + data.error);      }    } catch (err) {      alert('Failed to delete class');    }  };  const handleUpdateTutor = async (tutorId) => {    try {      const res = await fetch(`http://localhost:5000/api/admin/classes/${selectedClass.id}`, {        method: 'PUT',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify({ ...selectedClass, tutor_id: tutorId || null })      });      if (res.ok) {        alert('Tutor updated');        fetchClasses(selectedDept.code);      }    } catch (err) {      alert('Failed to update tutor');    }  };  const handleRemoveStudent = async (studentId, name) => {    if (!window.confirm(`Remove ${name} from ${selectedClass.name}?`)) return;    try {      const res = await fetch(`http://localhost:5000/api/admin/classes/students/${studentId}`, { method: 'DELETE' });      if (res.ok) {        alert('Student removed');        fetchClassStudents(selectedClass.id);      }    } catch (err) {      alert('Failed to remove student');    }  };  const handleAddStudent = async (e) => {    e.preventDefault();    setLoading(true);    try {      const res = await fetch('http://localhost:5000/api/admin/users', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify({          email: formData.email,          name: formData.name,          role: 'STUDENT',          metadata: {            departmentCode: selectedDept.code,            class_id: selectedClass.id,            dob: formData.dob,            semester: selectedClass.semester,            admissionNo: formData.admissionNo          }        })      });      if (res.ok) {        alert('Student added successfully');        setFormData({ ...formData, email: '', name: '', dob: '', admissionNo: '' });        fetchClassStudents(selectedClass.id);      } else {        const data = await res.json();        alert('Error: ' + data.error);      }    } catch (err) {      alert('Failed to add student');    } finally {      setLoading(false);    }  };  if (view === 'depts') {    return (      <div className="space-y-6">        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">          {departments.map(dept => (            <div              key={dept.id}              onClick={() => { setSelectedDept(dept); fetchClasses(dept.code); setView('classes'); }}              className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary-500 hover:shadow-md transition-all text-center"            >              <div className="mx-auto h-16 w-16 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">                <Building2 size={32} />              </div>              <h3 className="font-bold text-slate-900">{dept.name}</h3>              <p className="text-xs text-slate-500 mt-1 uppercase font-semibold">{dept.code}</p>            </div>          ))}        </div>      </div>    );  }  if (view === 'classes') {    return (      <div className="space-y-6">        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">          <button onClick={() => setView('depts')} className="hover:text-primary-600">Departments</button>          <ChevronRight size={14} />          <span className="font-bold text-slate-900">{selectedDept.name}</span>        </div>        <div className="grid gap-8 lg:grid-cols-2">          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">            <h3 className="mb-6 text-xl font-bold text-slate-900">Create New Class</h3>            <form onSubmit={handleCreateClass} className="space-y-4">              <div>                <label className="block text-sm font-medium text-slate-700 mb-1.5">Class Name</label>                <input name="classNameInput" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" placeholder="e.g. CS S7 A batch" />              </div>              <div className="grid grid-cols-2 gap-4">                <div>                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Semester</label>                  <select name="semester" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none">                    {[1, 2, 3, 4, 5, 6, 7, 8].map(s => <option key={s} value={s}>S{s}</option>)}                  </select>                </div>                <div>                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Batch</label>                  <input name="batch" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="e.g. A" defaultValue="A" />                </div>              </div>              <div>                <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Tutor</label>                <select name="tutorId" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none bg-white">                  <option value="">Select a Tutor</option>                  {staffList.map(s => (                    <option key={s.id} value={s.id}>{s.name}</option>                  ))}                </select>              </div>              <button type="submit" className="w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white hover:bg-slate-800">Create Class</button>            </form>          </div>          <div className="space-y-4">            <h3 className="text-lg font-bold text-slate-900">Existing Classes</h3>            <div className="grid gap-4">              {classes.map(cls => (                <div key={cls.id} className="group flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:border-primary-400 transition-all">                  <div onClick={() => { setSelectedClass(cls); fetchClassStudents(cls.id); setView('management'); }} className="flex-1 cursor-pointer">                    <div className="font-bold text-slate-900">S{cls.semester} - {cls.name}</div>                    <div className="text-xs text-slate-500">Tutor: {cls.tutor?.full_name || 'Not assigned'}</div>                  </div>                  <div className="flex items-center gap-2">                    <button                      onClick={(e) => { e.stopPropagation(); handleDeleteClass(cls.id, cls.name); }}                      className="p-2 text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"                    >                      <Trash2 size={18} />                    </button>                    <ChevronRight size={18} className="text-slate-400" />                  </div>                </div>              ))}              {classes.length === 0 && <p className="text-center py-10 text-slate-400 italic">No classes found in this department.</p>}            </div>          </div>        </div>      </div>    );  }  if (view === 'management') {    return (      <div className="space-y-6">        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">          <button onClick={() => setView('depts')} className="hover:text-primary-600">Departments</button>          <ChevronRight size={14} />          <button onClick={() => setView('classes')} className="hover:text-primary-600">{selectedDept.name}</button>          <ChevronRight size={14} />          <span className="font-bold text-slate-900">{selectedClass.name}</span>        </div>        <div className="grid gap-8 lg:grid-cols-3">          <div className="col-span-1 space-y-6">            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">              <h3 className="mb-4 text-lg font-bold text-slate-900">Class Details</h3>              <div className="space-y-4">                <div>                  <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Assigned Tutor</label>                  <select                    value={selectedClass.tutor_id || ''}                    onChange={(e) => handleUpdateTutor(e.target.value)}                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none bg-slate-50"                  >                    <option value="">No Tutor</option>                    {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}                  </select>                </div>              </div>            </div>            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">              <h3 className="mb-4 text-lg font-bold text-slate-900">Add Student</h3>              <form onSubmit={handleAddStudent} className="space-y-4">                <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Full Name" />                <input required value={formData.admissionNo} onChange={e => setFormData({ ...formData, admissionNo: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Admission Number" />                <input type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Email" />                <input type="date" required value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" />                <button type="submit" disabled={loading} className="w-full rounded-xl bg-primary-600 py-3 text-sm font-bold text-white hover:bg-primary-700">Add Student</button>              </form>            </div>          </div>          <div className="col-span-1 lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">            <div className="p-6 border-b border-slate-100 flex items-center justify-between">              <h3 className="text-lg font-bold text-slate-900">Enrolled Students ({classStudents.length})</h3>            </div>            <div className="overflow-x-auto">              <table className="w-full text-left text-sm">                <thead className="bg-slate-50 text-slate-500">                  <tr>                    <th className="px-6 py-4 font-semibold">Name</th>                    <th className="px-6 py-4 font-semibold">Admission #</th>                    <th className="px-6 py-4 font-semibold text-right">Actions</th>                  </tr>                </thead>                <tbody className="divide-y divide-slate-100">                  {classStudents.map(s => (                    <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">                      <td className="px-6 py-4">                        <div className="font-medium text-slate-900">{s.name}</div>                        <div className="text-xs text-slate-500">{s.email}</div>                      </td>                      <td className="px-6 py-4 font-mono text-xs">{s.admission_number}</td>                      <td className="px-6 py-4 text-right">                        <button onClick={() => handleRemoveStudent(s.id, s.name)} className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors">                          <Trash2 size={16} />                        </button>                      </td>                    </tr>                  ))}                  {classStudents.length === 0 && (                    <tr>                      <td colSpan="3" className="px-6 py-10 text-center text-slate-400 italic">No students enrolled in this class.</td>                    </tr>                  )}                </tbody>              </table>            </div>          </div>        </div>      </div>    );  }}function AddStaffTab({ departments }) {  const [loading, setLoading] = useState(false);  const [formData, setFormData] = useState({    email: '', name: '', departmentCode: departments[0]?.code || '', role: 'LECTURER', dob: '', employeeId: ''  });  useEffect(() => {    if (departments.length > 0 && !formData.departmentCode) {      setFormData(prev => ({ ...prev, departmentCode: departments[0].code }));    }  }, [departments]);  const handleCreate = async (e) => {    e.preventDefault();    setLoading(true);    try {      const response = await fetch('http://localhost:5000/api/admin/users', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify({ email: formData.email, name: formData.name, role: formData.role, metadata: { departmentCode: formData.departmentCode, dob: formData.dob, employeeId: formData.employeeId } })      });      if (!response.ok) throw new Error('Failed to add staff');      alert('Staff added successfully!');      setFormData({ ...formData, email: '', name: '', dob: '', employeeId: '' });    } catch (err) {      alert('Error: ' + err.message);    } finally {      setLoading(false);    }  };  return (    <div className="grid gap-8 lg:grid-cols-2">      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">        <h3 className="mb-6 text-xl font-bold text-slate-900">Add New Staff Member</h3>        <form onSubmit={handleCreate} className="space-y-5">          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">            <div className="col-span-1 md:col-span-2">              <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>              <input type="text" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Dr. Sarah Connor" />            </div>            <div className="col-span-1 md:col-span-2">              <label className="block text-sm font-medium text-slate-700 mb-1.5">Staff Employee ID</label>              <input type="text" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.employeeId} onChange={e => setFormData({ ...formData, employeeId: e.target.value })} placeholder="e.g. EMP123" />            </div>            <div className="col-span-1 md:col-span-2">              <label className="block text-sm font-medium text-slate-700 mb-1.5">Date of Birth</label>              <div className="relative">                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />                <input type="date" required className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} />              </div>            </div>            <div className="col-span-1 md:col-span-2">              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>              <input type="email" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="staff@college.edu" />            </div>            <div>              <label className="block text-sm font-medium text-slate-700 mb-1.5">Department</label>              <select className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" value={formData.departmentCode} onChange={e => setFormData({ ...formData, departmentCode: e.target.value })}>                {departments.map(dept => <option key={dept.id} value={dept.code}>{dept.name}</option>)}              </select>            </div>            <div>              <label className="block text-sm font-medium text-slate-700 mb-1.5">Designation</label>              <select className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>                <option value="LECTURER">Lecturer</option>                <option value="ASST_PROF">Asst. Professor</option>                <option value="HOD">HOD</option>                <option value="PRINCIPAL">Principal</option>              </select>            </div>          </div>          <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white disabled:opacity-70">            {loading ? 'Processing...' : 'Add Staff Member'}          </button>        </form>      </div>    </div>  );}function DepartmentsTab({ departments, onUpdate }) {  const [loading, setLoading] = useState(false);  const [showForm, setShowForm] = useState(false);  const [formData, setFormData] = useState({ name: '', code: '' });  const handleCreate = async (e) => {    e.preventDefault();    setLoading(true);    try {      const res = await fetch('http://localhost:5000/api/admin/departments', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify(formData)      });      if (res.ok) {        onUpdate();        setShowForm(false);        setFormData({ name: '', code: '' });      }    } catch (err) {      console.error(err);    } finally {      setLoading(false);    }  };  const handleDelete = async (id, name) => {    if (!window.confirm(`Delete department ${name}? This will remove all linked data.`)) return;    try {      await fetch(`http://localhost:5000/api/admin/departments/${id}`, { method: 'DELETE' });      onUpdate();    } catch (err) {      console.error(err);    }  };  return (    <div className="space-y-6">      <div className="flex justify-between items-center">        <h3 className="text-xl font-bold text-slate-900">Manage Departments</h3>        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary-200 transition-all hover:bg-primary-700">          <Plus size={18} />          {showForm ? 'Cancel' : 'Add Department'}        </button>      </div>      {showForm && (        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-in fade-in slide-in-from-top-4">          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">            <div>              <label className="block text-sm font-medium text-slate-700 mb-1.5">Department Name</label>              <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" placeholder="e.g. Mechanical Engineering" />            </div>            <div>              <label className="block text-sm font-medium text-slate-700 mb-1.5">Code</label>              <input required value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" placeholder="e.g. ME" />            </div>            <button type="submit" disabled={loading} className="rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-70">              {loading ? 'Creating...' : 'Create Department'}            </button>          </form>        </div>      )}      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">        {departments.map(dept => (          <div key={dept.id} className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary-500 hover:shadow-md transition-all">            <button onClick={() => handleDelete(dept.id, dept.name)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors">              <XCircle size={18} />            </button>            <div className="mx-auto h-16 w-16 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center mb-4">              <Building2 size={32} />            </div>            <h3 className="font-bold text-slate-900 text-center">{dept.name}</h3>            <p className="text-xs text-slate-500 mt-1 uppercase font-semibold text-center">{dept.code}</p>          </div>        ))}      </div>    </div>  );}function ManageRolesTab({ departments }) {  const [loading, setLoading] = useState(false);  const [formData, setFormData] = useState({ userId: '', role: 'HOD', departmentCode: '' });  const [staff, setStaff] = useState([]);  useEffect(() => {    fetchStaff();  }, []);  const fetchStaff = async () => {    try {      const res = await fetch('http://localhost:5000/api/admin/staff');      const data = await res.json();      setStaff(data.staff || []);    } catch (err) {      console.error(err);    }  };  const handleAssign = async (e) => {    e.preventDefault();    if (!formData.userId) return alert('Select a staff member');    setLoading(true);    try {      const res = await fetch('http://localhost:5000/api/admin/assign-role', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify(formData)      });      if (res.ok) alert('Role assigned successfully');    } catch (err) {      console.error(err);    } finally {      setLoading(false);    }  };  return (    <div className="max-w-2xl mx-auto rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">      <h3 className="text-xl font-bold text-slate-900 mb-6 text-center">Assign Administrative Roles</h3>      <form onSubmit={handleAssign} className="space-y-6">        <div>          <label className="block text-sm font-medium text-slate-700 mb-2">Select Staff Member</label>          <select value={formData.userId} onChange={e => setFormData({ ...formData, userId: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-primary-500 bg-slate-50">            <option value="">Select Staff</option>            {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}          </select>        </div>        <div className="grid grid-cols-2 gap-4">          <div>            <label className="block text-sm font-medium text-slate-700 mb-2">Role</label>            <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-primary-500 bg-slate-50">              <option value="HOD">Department Head (HOD)</option>              <option value="PRINCIPAL">College Principal</option>            </select>          </div>          <div>            <label className="block text-sm font-medium text-slate-700 mb-2">Target Department</label>            <select disabled={formData.role === 'PRINCIPAL'} value={formData.departmentCode} onChange={e => setFormData({ ...formData, departmentCode: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-primary-500 bg-slate-50 disabled:opacity-50">              <option value="">Select Dept (for HOD)</option>              {departments.map(dept => <option key={dept.id} value={dept.code}>{dept.name}</option>)}            </select>          </div>        </div>        <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-900 py-4 text-sm font-bold text-white hover:bg-slate-800 shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">          {loading ? 'Processing...' : 'Assign Role & Grant Permissions'}        </button>      </form>    </div>  );}function PromoteTab() {  const [loading, setLoading] = useState(false);  const [results, setResults] = useState(null);  const handlePromote = async () => {    if (!window.confirm('CRITICAL: This will promote every student to the next semester and graduate S8 students. This cannot be undone. Proceed?')) return;    setLoading(true);    try {      const res = await fetch('http://localhost:5000/api/admin/promote', { method: 'POST' });      const data = await res.json();      setResults(data);    } catch (err) {      alert('Promotion failed: ' + err.message);    } finally {      setLoading(false);    }  };  return (    <div className="max-w-3xl mx-auto text-center space-y-8 py-10">      <div className="mx-auto h-24 w-24 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">        <BookOpen size={48} />      </div>      <div>        <h3 className="text-2xl font-bold text-slate-900">Academic Year Promotion</h3>        <p className="max-w-md mx-auto text-slate-500 mt-2">          Bulk promote all students to the next semester. Students in S8 will be automatically graduated and archived.        </p>      </div>      <button onClick={handlePromote} disabled={loading} className="px-8 py-4 rounded-2xl bg-slate-900 text-white font-bold text-lg shadow-2xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-70">        {loading ? 'Processing Promotion...' : 'Start Promotion Process'}      </button>      {results && (        <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 animate-in fade-in duration-500">          <h4 className="font-bold text-lg mb-2">Promotion Successful!</h4>          <p className="text-sm">Classes Updated: <span className="font-bold">{results.promotedClasses}</span></p>          <p className="text-sm">Students Graduated: <span className="font-bold">{results.graduatedStudents}</span></p>        </div>      )}    </div>  );}function AddCourseTab({ departments }) {  const [subjects, setSubjects] = useState([]);  const [loading, setLoading] = useState(false);  const [formData, setFormData] = useState({ code: '', name: '', department: departments[0]?.code || '' });  useEffect(() => {    fetchSubjects();  }, []);  const fetchSubjects = async () => {    try {      const res = await fetch('http://localhost:5000/api/admin/subjects');      const data = await res.json();      setSubjects(data.subjects || []);    } catch (err) { console.error(err); }  };  const handleCreate = async (e) => {    e.preventDefault();    setLoading(true);    try {      const res = await fetch('http://localhost:5000/api/admin/subjects', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify(formData)      });      if (res.ok) {        alert('Course added');        setFormData({ ...formData, code: '', name: '' });        fetchSubjects();      }    } catch (err) { alert('Failed to add course'); }    finally { setLoading(false); }  };  const handleDelete = async (id) => {    if (!window.confirm('Delete this course?')) return;    try {      await fetch(`http://localhost:5000/api/admin/subjects/${id}`, { method: 'DELETE' });      fetchSubjects();    } catch (err) { console.error(err); }  };  return (    <div className="space-y-8">      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm max-w-2xl mx-auto">        <h3 className="text-xl font-bold mb-6">Add New Course</h3>        <form onSubmit={handleCreate} className="space-y-4">          <div className="grid grid-cols-2 gap-4">            <input required placeholder="Course Code (e.g. CS301)" className="p-3 rounded-xl border border-slate-200 outline-none focus:border-primary-500" value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} />            <input required placeholder="Course Name" className="p-3 rounded-xl border border-slate-200 outline-none focus:border-primary-500" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />          </div>          <div className="grid grid-cols-1 gap-4">            <select className="p-3 rounded-xl border border-slate-200 outline-none" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>              {departments.map(d => <option key={d.id} value={d.code}>{d.name}</option>)}            </select>          </div>          <button disabled={loading} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800">Add Course</button>        </form>      </div>      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">        <table className="w-full text-left text-sm">          <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">            <tr><th className="px-6 py-4">Code</th><th className="px-6 py-4">Name</th><th className="px-6 py-4">Dept</th></tr>          </thead>          <tbody className="divide-y divide-slate-100">            {subjects.map(s => (              <tr key={s.id} className="hover:bg-slate-50">                <td className="px-6 py-4 font-bold">{s.code}</td>                <td className="px-6 py-4">{s.name}</td>                <td className="px-6 py-4 text-xs font-semibold">{s.department}</td>              </tr>            ))}          </tbody>        </table>      </div>    </div>  );}function TimetableTab({ departments, staffList }) {  const [view, setView] = useState('depts');  const [selectedDept, setSelectedDept] = useState(null);  const [selectedClass, setSelectedClass] = useState(null);  const [classes, setClasses] = useState([]);  const [timetable, setTimetable] = useState({});  const [subjects, setSubjects] = useState([]);  const [editingSlot, setEditingSlot] = useState(null);  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];  const periods = [    { id: 1, time: '09:10 - 10:10' },    { id: 2, time: '10:10 - 11:10' },    { id: 'break1', label: 'Break', duration: '10m' },    { id: 3, time: '11:20 - 12:20' },    { id: 'lunch', label: 'Lunch', duration: '40m' },    { id: 4, time: '13:00 - 14:00' },    { id: 5, time: '14:00 - 15:00' },    { id: 'break2', label: 'Break', duration: '10m' },    { id: 6, time: '15:10 - 16:00' }  ];  const fetchClasses = async (code) => {    const res = await fetch(`http://localhost:5000/api/admin/classes?departmentCode=${code}`);    const data = await res.json();    setClasses(data.classes || []);  };  const fetchTimetable = async (classId) => {    const res = await fetch(`http://localhost:5000/api/admin/timetable?classId=${classId}`);    const data = await res.json();    const map = {};    (data.timetable || []).forEach(t => {      map[`${t.day_of_week}-${t.period}`] = t;    });    setTimetable(map);  };  const fetchSubjects = async (deptCode) => {    const res = await fetch(`http://localhost:5000/api/admin/subjects?departmentCode=${deptCode}`);    const data = await res.json();    setSubjects(data.subjects || []);  };  const handleUpdateSlot = async (subjectId, staffId) => {    if (!editingSlot) return;    try {      const res = await fetch('http://localhost:5000/api/admin/timetable', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify({          class_id: selectedClass.id,          day_of_week: editingSlot.day,          period: editingSlot.period,          subject_id: subjectId,          staff_id: staffId        })      });      if (res.ok) {        fetchTimetable(selectedClass.id);        setEditingSlot(null);      }    } catch (err) { alert('Update failed'); }  };  const handleReset = async () => {    if (!window.confirm('Reset entire timetable for this class?')) return;    await fetch(`http://localhost:5000/api/admin/timetable/${selectedClass.id}`, { method: 'DELETE' });    fetchTimetable(selectedClass.id);  };  if (view === 'depts') {    return (      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">        {departments.map(dept => (          <div key={dept.id} onClick={() => { setSelectedDept(dept); fetchClasses(dept.code); setView('classes'); }} className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-8 shadow-sm hover:border-primary-500 transition-all text-center group">            <Building2 size={40} className="mx-auto mb-4 text-slate-400 group-hover:text-primary-500" />            <h3 className="font-bold text-slate-900">{dept.name}</h3>            <p className="text-xs text-slate-500 mt-2">{dept.code}</p>          </div>        ))}      </div>    );  }  if (view === 'classes') {    return (      <div className="space-y-6">        <button onClick={() => setView('depts')} className="flex items-center gap-2 text-primary-600 font-bold"><ChevronRight className="rotate-180" size={18} /> Back to Departments</button>        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">          {classes.map(cls => (            <div key={cls.id} onClick={() => { setSelectedClass(cls); fetchTimetable(cls.id); fetchSubjects(selectedDept.code); setView('grid'); }} className="cursor-pointer p-6 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all">              <div className="font-bold">S{cls.semester} - {cls.name}</div>              <div className="text-xs text-slate-500 mt-1">Class Timetable</div>            </div>          ))}        </div>      </div>    );  }  return (    <div className="space-y-6">      <div className="flex justify-between items-center">        <button onClick={() => setView('classes')} className="flex items-center gap-2 text-primary-600 font-bold"><ChevronRight className="rotate-180" size={18} /> Back to Classes</button>        <div className="flex gap-4">          <button onClick={handleReset} className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50">Reset Timetable</button>          <button className="px-6 py-2 rounded-xl bg-slate-900 text-white font-bold text-sm shadow-xl shadow-slate-200">Save Changes</button>        </div>      </div>      <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">        <div className="overflow-x-auto">          <table className="w-full border-collapse">            <thead>              <tr className="bg-slate-900 text-white">                <th className="px-4 py-6 text-left font-bold uppercase text-xs tracking-wider border-r border-slate-800">Day / Period</th>                {periods.map((p, idx) => (                  <th key={idx} className={`px-4 py-6 text-center text-xs font-bold uppercase tracking-wider ${p.label ? 'bg-slate-800/50 w-20' : ''}`}>                    {p.time || p.label}                  </th>                ))}              </tr>            </thead>            <tbody>              {days.map((day, dayIdx) => (                <tr key={dayIdx} className="border-b border-slate-100">                  <td className="px-4 py-8 bg-slate-50 font-bold text-slate-900 border-r border-slate-200">{day}</td>                  {periods.map((p, pIdx) => {                    if (p.label) return <td key={pIdx} className="bg-slate-50/50 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">{p.label}</td>;                    const slot = timetable[`${dayIdx}-${p.id}`];                    return (                      <td key={pIdx} className="p-2 border-r border-slate-100 min-w-[160px]">                        <div                          onClick={() => setEditingSlot({ day: dayIdx, period: p.id })}                          className={`h-full min-h-[100px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-3 transition-all cursor-pointer ${slot ? 'border-primary-100 bg-primary-50/30' : 'border-slate-100 hover:border-primary-200 hover:bg-slate-50'}`}                        >                          {slot ? (                            <>                              <div className="font-bold text-slate-900 text-sm text-center">{slot.subject?.name}</div>                              <div className="text-xs text-primary-600 font-bold mt-1 bg-white px-2 py-0.5 rounded-full shadow-sm">{slot.staff?.full_name}</div>                              <div className="text-[10px] text-slate-400 font-medium mt-2 uppercase tracking-tighter">{slot.subject?.code}</div>                            </>                          ) : (                            <Plus size={20} className="text-slate-300" />                          )}                        </div>                      </td>                    );                  })}                </tr>              ))}            </tbody>          </table>        </div>      </div>      {editingSlot && (        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">            <h4 className="text-xl font-bold mb-6 text-slate-900">Assign Slot</h4>            <div className="space-y-6">              <div>                <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>                <select id="subSelect" className="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-primary-500 font-medium">                  <option value="">Select Subject</option>                  {subjects.map(s => <option key={s.id} value={s.id}>{s.code} - {s.name}</option>)}                </select>              </div>              <div>                <label className="block text-sm font-bold text-slate-700 mb-2">Lecturer</label>                <select id="staffSelect" className="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-primary-500 font-medium">                  <option value="">Select Lecturer</option>                  {staffList.filter(s => s.deptCode === selectedDept.code).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}                </select>              </div>              <div className="flex gap-4 pt-4">                <button onClick={() => setEditingSlot(null)} className="flex-1 py-4 font-bold text-slate-500 rounded-2xl hover:bg-slate-50">Cancel</button>                <button onClick={() => handleUpdateSlot(document.getElementById('subSelect').value, document.getElementById('staffSelect').value)} className="flex-1 py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl shadow-slate-200 hover:bg-slate-800">Assign</button>              </div>            </div>          </div>        </div>      )}    </div>  );}
+import React, { useEffect, useState } from 'react'; import { useSearchParams } from 'react-router-dom'; import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'; import { LayoutDashboard, Users, Building2, GraduationCap, Upload, Plus, UserPlus, Briefcase, Search, Filter, MoreVertical, CheckCircle, XCircle, Shield, Calendar, LogOut, ChevronRight, BookOpen, Trash2 } from 'lucide-react'; const chartData = [{ month: 'Jan', users: 120 }, { month: 'Feb', users: 180 }, { month: 'Mar', users: 260 }, { month: 'Apr', users: 320 }, { month: 'May', users: 410 }]; export default function SuperAdminDashboard() {
+  const [searchParams, setSearchParams] = useSearchParams(); const activeTab = searchParams.get('tab') || 'overview'; const setActiveTab = (tab) => { setSearchParams({ tab }); }; const [stats, setStats] = useState({ totalUsers: 0, activeDevices: 14, attendance: '94.3%' }); const [departments, setDepartments] = useState([]); const [staffList, setStaffList] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { fetchStats(); fetchDepartments(); fetchStaff(); }, []); const fetchStats = async () => {
+    try { const response = await fetch('http://localhost:5000/api/admin/stats'); const data = await response.json(); if (data.totalUsers) { setStats(prev => ({ ...prev, totalUsers: data.totalUsers })); } } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/departments');
+      const data = await response.json();
+      if (data.departments) {
+        setDepartments(data.departments);
+      }
+    } catch (error) {
+      console.error('Failed to fetch departments:', error);
+    }
+  };
+  const fetchStaff = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/staff');
+      const data = await response.json();
+      if (data.staff) {
+        setStaffList(data.staff);
+      }
+    } catch (error) {
+      console.error('Failed to fetch staff:', error);
+    }
+  };
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'users', label: 'All Users', icon: Users },
+    { id: 'departments', label: 'Departments', icon: Building2 },
+    { id: 'manage-roles', label: 'Manage Roles', icon: Shield },
+    { id: 'add-student', label: 'Add Student/Class', icon: GraduationCap },
+    { id: 'add-course', label: 'Add Course', icon: BookOpen },
+    { id: 'timetable', label: 'Timetable', icon: Calendar },
+    { id: 'add-staff', label: 'Add Staff', icon: Briefcase },
+    { id: 'promote', label: 'Promote Students', icon: GraduationCap },
+  ];
+  return (
+    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto w-full">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+          {tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}
+        </h1>
+        <p className="text-slate-500 mt-1">
+          {activeTab === 'overview' && 'Real-time overview of your campus operations.'}
+          {activeTab === 'users' && 'Manage all students and staff members in one place.'}
+          {activeTab === 'departments' && 'Organize and manage faculty departments.'}
+          {activeTab === 'manage-roles' && 'Assign HOD and Principal roles to staff.'}
+          {activeTab === 'add-student' && 'Manage departments, classes and student registration.'}
+          {activeTab === 'add-course' && 'Define academic courses and subjects per department.'}
+          {activeTab === 'timetable' && 'Construct and manage weekly schedules for classes.'}
+          {activeTab === 'add-staff' && 'Onboard new faculty and administrative staff.'}
+          {activeTab === 'promote' && 'Perform bulk semester promotion for students.'}
+        </p>
+      </div>
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-in-out">
+        {activeTab === 'overview' && <OverviewTab stats={stats} />}
+        {activeTab === 'users' && <UsersListTab />}
+        {activeTab === 'departments' && <DepartmentsTab departments={departments} onUpdate={fetchDepartments} />}
+        {activeTab === 'manage-roles' && <ManageRolesTab departments={departments} />}
+        {activeTab === 'add-student' && <AddStudentTab departments={departments} staffList={staffList} />}
+        {activeTab === 'add-course' && <AddCourseTab departments={departments} />}
+        {activeTab === 'timetable' && <TimetableTab departments={departments} staffList={staffList} />}
+        {activeTab === 'add-staff' && <AddStaffTab departments={departments} />}
+        {activeTab === 'promote' && <PromoteTab />}
+      </div>
+    </div>
+  );
+} function OverviewTab({ stats }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 md:grid-cols-3">
+        <StatCard title="Total Users" value={stats.totalUsers} icon={Users} trend="+12% from last month" color="bg-blue-500" />
+        <StatCard title="Active Devices" value={stats.activeDevices} icon={Shield} trend="+2 new this week" color="bg-emerald-500" />
+        <StatCard title="Avg. Attendance" value={stats.attendance} icon={CheckCircle} trend="Consistent" color="bg-purple-500" />
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">User Growth</h3>
+            <p className="text-sm text-slate-500">New joins over the last 5 months</p>
+          </div>
+          <button className="text-sm font-medium text-primary-600 hover:text-primary-700">View Report</button>
+        </div>
+        <div className="h-80 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} dy={10} tick={{ fill: '#64748B', fontSize: 12 }} />
+              <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ stroke: '#cbd5e1' }} />
+              <Line type="monotone" dataKey="users" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+} function StatCard({ title, value, icon: Icon, trend, color }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all hover:shadow-md">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`rounded-xl p-3 ${color} bg-opacity-10`}>
+          <Icon className={`h-6 w-6 ${color.replace('bg-', 'text-')}`} />
+        </div>
+        <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-1 rounded-full">30 Days</span>
+      </div>
+      <div>
+        <div className="text-3xl font-bold text-slate-900">{value}</div>
+        <div className="text-sm font-medium text-slate-500 mt-1">{title}</div>
+      </div>
+      <div className="mt-4 flex items-center text-xs text-emerald-600 font-medium">
+        {trend}
+      </div>
+    </div>
+  );
+} function UsersListTab() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/users');
+      const data = await response.json();
+      if (data.users) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.dept.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const handleDeleteUser = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to remove ${name}? This will permanently delete their account.`)) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert('User removed successfully');
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Failed to delete user');
+    }
+  };
+  if (loading) return <div className="text-center py-10 text-slate-500">Loading users...</div>;
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all"
+          />
+        </div>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-slate-500">
+            <tr>
+              <th className="px-6 py-4 font-semibold">Name</th>
+              <th className="px-6 py-4 font-semibold">Official ID</th>
+              <th className="px-6 py-4 font-semibold">Role</th>
+              <th className="px-6 py-4 font-semibold">Department</th>
+              <th className="px-6 py-4 font-semibold">Status</th>
+              <th className="px-6 py-4 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredUsers.map((user) => (
+              <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-xs">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-slate-900">{user.name}</div>
+                      <div className="text-xs text-slate-500">{user.email}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                    {user.officialId || 'N/A'}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'STUDENT' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+                    }`}>
+                    {user.role}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-slate-600">{user.dept}</td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                    {user.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => handleDeleteUser(user.id, user.name)}
+                      className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      <XCircle size={18} />
+                    </button>
+                    <button className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                      <MoreVertical size={18} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+} function AddStudentTab({ departments, staffList }) {
+  const [view, setView] = useState('depts');
+  const [selectedDept, setSelectedDept] = useState(null);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [classes, setClasses] = useState([]);
+  const [classStudents, setClassStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '', name: '', dob: '', admissionNo: ''
+  });
+  const fetchClasses = async (deptCode) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/classes?departmentCode=${deptCode}`);
+      const data = await res.json();
+      setClasses(data.classes || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const fetchClassStudents = async (classId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/classes/${classId}/students`);
+      const data = await res.json();
+      if (data.students) setClassStudents(data.students);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleCreateClass = async (e) => {
+    e.preventDefault();
+    const className = e.currentTarget.classNameInput.value;
+    const tutorId = e.currentTarget.tutorId.value;
+    const semester = e.currentTarget.semester.value;
+    const batch = e.currentTarget.batch.value;
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/classes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: className, department_code: selectedDept.code, tutor_id: tutorId || null, semester, batch })
+      });
+      if (res.ok) {
+        alert('Class created successfully');
+        e.target.reset();
+        fetchClasses(selectedDept.code);
+      } else {
+        const data = await res.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Failed to create class');
+    }
+  };
+  const handleDeleteClass = async (classId, className) => {
+    if (!window.confirm(`Are you sure you want to delete class ${className}? All student enrollments for this class will be cleared.`)) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/classes/${classId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert('Class deleted successfully');
+        fetchClasses(selectedDept.code);
+      } else {
+        const data = await res.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Failed to delete class');
+    }
+  };
+  const handleUpdateTutor = async (tutorId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/classes/${selectedClass.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...selectedClass, tutor_id: tutorId || null })
+      });
+      if (res.ok) {
+        alert('Tutor updated');
+        fetchClasses(selectedDept.code);
+      }
+    } catch (err) {
+      alert('Failed to update tutor');
+    }
+  };
+  const handleRemoveStudent = async (studentId, name) => {
+    if (!window.confirm(`Remove ${name} from ${selectedClass.name}?`)) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/classes/students/${studentId}`, { method: 'DELETE' });
+      if (res.ok) {
+        alert('Student removed');
+        fetchClassStudents(selectedClass.id);
+      }
+    } catch (err) {
+      alert('Failed to remove student');
+    }
+  };
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          role: 'STUDENT',
+          metadata: {
+            departmentCode: selectedDept.code,
+            class_id: selectedClass.id,
+            dob: formData.dob,
+            semester: formData.semester || selectedClass.semester,
+            admissionNo: formData.admissionNo
+          }
+        })
+      });
+      if (res.ok) {
+        alert('Student added successfully');
+        setFormData({ ...formData, email: '', name: '', dob: '', admissionNo: '', semester: '' });
+        fetchClassStudents(selectedClass.id);
+      } else {
+        const data = await res.json();
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Failed to add student');
+    } finally {
+      setLoading(false);
+    }
+  };
+  if (view === 'depts') {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {departments.map(dept => (
+            <div
+              key={dept.id}
+              onClick={() => { setSelectedDept(dept); fetchClasses(dept.code); setView('classes'); }}
+              className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary-500 hover:shadow-md transition-all text-center"
+            >
+              <div className="mx-auto h-16 w-16 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Building2 size={32} />
+              </div>
+              <h3 className="font-bold text-slate-900">{dept.name}</h3>
+              <p className="text-xs text-slate-500 mt-1 uppercase font-semibold">{dept.code}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (view === 'classes') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+          <button onClick={() => setView('depts')} className="hover:text-primary-600">Departments</button>
+          <ChevronRight size={14} />
+          <span className="font-bold text-slate-900">{selectedDept.name}</span>
+        </div>
+        <div className="grid gap-8 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-6 text-xl font-bold text-slate-900">Create New Class</h3>
+            <form onSubmit={handleCreateClass} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Class Name</label>
+                <input name="classNameInput" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" placeholder="e.g. CS S7 A batch" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Semester</label>
+                  <select name="semester" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(s => <option key={s} value={s}>S{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Batch</label>
+                  <input name="batch" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="e.g. A" defaultValue="A" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Tutor</label>
+                <select name="tutorId" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none bg-white">
+                  <option value="">Select a Tutor</option>
+                  {staffList.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white hover:bg-slate-800">Create Class</button>
+            </form>
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Existing Classes</h3>
+            <div className="grid gap-4">
+              {classes.map(cls => (
+                <div key={cls.id} className="group flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:border-primary-400 transition-all">
+                  <div onClick={() => { setSelectedClass(cls); fetchClassStudents(cls.id); setView('management'); }} className="flex-1 cursor-pointer">
+                    <div className="font-bold text-slate-900">S{cls.semester} - {cls.name}</div>
+                    <div className="text-xs text-slate-500">Tutor: {cls.tutor?.full_name || 'Not assigned'}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteClass(cls.id, cls.name); }}
+                      className="p-2 text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    <ChevronRight size={18} className="text-slate-400" />
+                  </div>
+                </div>
+              ))}
+              {classes.length === 0 && <p className="text-center py-10 text-slate-400 italic">No classes found in this department.</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (view === 'management') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+          <button onClick={() => setView('depts')} className="hover:text-primary-600">Departments</button>
+          <ChevronRight size={14} />
+          <button onClick={() => setView('classes')} className="hover:text-primary-600">{selectedDept.name}</button>
+          <ChevronRight size={14} />
+          <span className="font-bold text-slate-900">{selectedClass.name}</span>
+        </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="col-span-1 space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold text-slate-900">Class Details</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Assigned Tutor</label>
+                  <select
+                    value={selectedClass.tutor_id || ''}
+                    onChange={(e) => handleUpdateTutor(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none bg-slate-50"
+                  >
+                    <option value="">No Tutor</option>
+                    {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold text-slate-900">Add Student</h3>
+              <form onSubmit={handleAddStudent} className="space-y-4">
+                <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Full Name" />
+                <input required value={formData.admissionNo} onChange={e => setFormData({ ...formData, admissionNo: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Admission Number" />
+                <input type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" placeholder="Email" />
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="date" required value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" />
+                  <input
+                    type="number"
+                    min="1"
+                    max="8"
+                    placeholder="Sem (Opt)"
+                    value={formData.semester || ''}
+                    onChange={e => setFormData({ ...formData, semester: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none"
+                    title="Override default class semester if needed"
+                  />
+                </div>
+                <button type="submit" disabled={loading} className="w-full rounded-xl bg-primary-600 py-3 text-sm font-bold text-white hover:bg-primary-700">Add Student</button>
+              </form>
+            </div>
+          </div>
+          <div className="col-span-1 lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900">Enrolled Students ({classStudents.length})</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="px-6 py-4 font-semibold">Name</th>
+                    <th className="px-6 py-4 font-semibold">Admission #</th>
+                    <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {classStudents.map(s => (
+                    <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-900">{s.name}</div>
+                        <div className="text-xs text-slate-500">{s.email}</div>
+                      </td>
+                      <td className="px-6 py-4 font-mono text-xs">{s.admission_number}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button onClick={() => handleRemoveStudent(s.id, s.name)} className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {classStudents.length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="px-6 py-10 text-center text-slate-400 italic">No students enrolled in this class.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+} function AddStaffTab({ departments }) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '', name: '', departmentCode: departments[0]?.code || '', role: 'LECTURER', dob: '', employeeId: ''
+  });
+  useEffect(() => {
+    if (departments.length > 0 && !formData.departmentCode) {
+      setFormData(prev => ({ ...prev, departmentCode: departments[0].code }));
+    }
+  }, [departments]);
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, name: formData.name, role: formData.role, metadata: { departmentCode: formData.departmentCode, dob: formData.dob, employeeId: formData.employeeId } })
+      });
+      if (!response.ok) throw new Error('Failed to add staff');
+      alert('Staff added successfully!');
+      setFormData({ ...formData, email: '', name: '', dob: '', employeeId: '' });
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="grid gap-8 lg:grid-cols-2">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 className="mb-6 text-xl font-bold text-slate-900">Add New Staff Member</h3>
+        <form onSubmit={handleCreate} className="space-y-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+              <input type="text" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Dr. Sarah Connor" />
+            </div>
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Staff Employee ID</label>
+              <input type="text" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.employeeId} onChange={e => setFormData({ ...formData, employeeId: e.target.value })} placeholder="e.g. EMP123" />
+            </div>
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Date of Birth</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <input type="date" required className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} />
+              </div>
+            </div>
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+              <input type="email" required className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="staff@college.edu" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Department</label>
+              <select className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" value={formData.departmentCode} onChange={e => setFormData({ ...formData, departmentCode: e.target.value })}>
+                {departments.map(dept => <option key={dept.id} value={dept.code}>{dept.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Designation</label>
+              <select className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                <option value="LECTURER">Lecturer</option>
+                <option value="ASST_PROF">Asst. Professor</option>
+                <option value="HOD">HOD</option>
+                <option value="PRINCIPAL">Principal</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white disabled:opacity-70">
+            {loading ? 'Processing...' : 'Add Staff Member'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+} function DepartmentsTab({ departments, onUpdate }) {
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ name: '', code: '' });
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/departments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        onUpdate();
+        setShowForm(false);
+        setFormData({ name: '', code: '' });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Delete department ${name}? This will remove all linked data.`)) return;
+    try {
+      await fetch(`http://localhost:5000/api/admin/departments/${id}`, { method: 'DELETE' });
+      onUpdate();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-bold text-slate-900">Manage Departments</h3>
+        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary-200 transition-all hover:bg-primary-700">
+          <Plus size={18} />
+          {showForm ? 'Cancel' : 'Add Department'}
+        </button>
+      </div>
+      {showForm && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-in fade-in slide-in-from-top-4">
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Department Name</label>
+              <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" placeholder="e.g. Mechanical Engineering" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Code</label>
+              <input required value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500" placeholder="e.g. ME" />
+            </div>
+            <button type="submit" disabled={loading} className="rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-70">
+              {loading ? 'Creating...' : 'Create Department'}
+            </button>
+          </form>
+        </div>
+      )}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {departments.map(dept => (
+          <div key={dept.id} className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary-500 hover:shadow-md transition-all">
+            <button onClick={() => handleDelete(dept.id, dept.name)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors">
+              <XCircle size={18} />
+            </button>
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center mb-4">
+              <Building2 size={32} />
+            </div>
+            <h3 className="font-bold text-slate-900 text-center">{dept.name}</h3>
+            <p className="text-xs text-slate-500 mt-1 uppercase font-semibold text-center">{dept.code}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+} function ManageRolesTab({ departments }) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ userId: '', role: 'HOD', departmentCode: '' });
+  const [staff, setStaff] = useState([]);
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+  const fetchStaff = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/staff');
+      const data = await res.json();
+      setStaff(data.staff || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    if (!formData.userId) return alert('Select a staff member');
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/assign-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) alert('Role assigned successfully');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="max-w-2xl mx-auto rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h3 className="text-xl font-bold text-slate-900 mb-6 text-center">Assign Administrative Roles</h3>
+      <form onSubmit={handleAssign} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Select Staff Member</label>
+          <select value={formData.userId} onChange={e => setFormData({ ...formData, userId: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-primary-500 bg-slate-50">
+            <option value="">Select Staff</option>
+            {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Role</label>
+            <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-primary-500 bg-slate-50">
+              <option value="HOD">Department Head (HOD)</option>
+              <option value="PRINCIPAL">College Principal</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Target Department</label>
+            <select disabled={formData.role === 'PRINCIPAL'} value={formData.departmentCode} onChange={e => setFormData({ ...formData, departmentCode: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-primary-500 bg-slate-50 disabled:opacity-50">
+              <option value="">Select Dept (for HOD)</option>
+              {departments.map(dept => <option key={dept.id} value={dept.code}>{dept.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-900 py-4 text-sm font-bold text-white hover:bg-slate-800 shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
+          {loading ? 'Processing...' : 'Assign Role & Grant Permissions'}
+        </button>
+      </form>
+    </div>
+  );
+} function PromoteTab() {
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const handlePromote = async () => {
+    if (!window.confirm('CRITICAL: This will promote every student to the next semester and graduate S8 students. This cannot be undone. Proceed?')) return;
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/promote', { method: 'POST' });
+      const data = await res.json();
+      setResults(data);
+    } catch (err) {
+      alert('Promotion failed: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="max-w-3xl mx-auto text-center space-y-8 py-10">
+      <div className="mx-auto h-24 w-24 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
+        <BookOpen size={48} />
+      </div>
+      <div>
+        <h3 className="text-2xl font-bold text-slate-900">Academic Year Promotion</h3>
+        <p className="max-w-md mx-auto text-slate-500 mt-2">
+          Bulk promote all students to the next semester. Students in S8 will be automatically graduated and archived.
+        </p>
+      </div>
+      <button onClick={handlePromote} disabled={loading} className="px-8 py-4 rounded-2xl bg-slate-900 text-white font-bold text-lg shadow-2xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-70">
+        {loading ? 'Processing Promotion...' : 'Start Promotion Process'}
+      </button>
+      {results && (
+        <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 animate-in fade-in duration-500">
+          <h4 className="font-bold text-lg mb-2">Promotion Successful!</h4>
+          <p className="text-sm">Classes Updated: <span className="font-bold">{results.promotedClasses}</span></p>
+          <p className="text-sm">Students Graduated: <span className="font-bold">{results.graduatedStudents}</span></p>
+        </div>
+      )}
+    </div>
+  );
+} function AddCourseTab({ departments }) {
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ code: '', name: '', department: departments[0]?.code || '', semester: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', semester: '' });
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  const fetchSubjects = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/subjects');
+      const data = await res.json();
+      setSubjects(data.subjects || []);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/subjects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        alert('Course added');
+        setFormData({ ...formData, code: '', name: '', semester: '' });
+        fetchSubjects();
+      }
+    } catch (err) { alert('Failed to add course'); }
+    finally { setLoading(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this course?')) return;
+    try {
+      await fetch(`http://localhost:5000/api/admin/subjects/${id}`, { method: 'DELETE' });
+      fetchSubjects();
+    } catch (err) { console.error(err); }
+  };
+
+  const startEdit = (subject) => {
+    setEditingId(subject.id);
+    setEditForm({ name: subject.name, semester: subject.semester || '' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ name: '', semester: '' });
+  };
+
+  const handleUpdate = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/subjects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      if (res.ok) {
+        alert('Updated successfully');
+        setEditingId(null);
+        fetchSubjects();
+      } else {
+        alert('Update failed');
+      }
+    } catch (err) { alert('Update failed'); }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm max-w-2xl mx-auto">
+        <h3 className="text-xl font-bold mb-6">Add New Course</h3>
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <input required placeholder="Course Code (e.g. CS301)" className="p-3 rounded-xl border border-slate-200 outline-none focus:border-primary-500" value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} />
+            <input required placeholder="Course Name" className="p-3 rounded-xl border border-slate-200 outline-none focus:border-primary-500" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <select className="p-3 rounded-xl border border-slate-200 outline-none" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
+              {departments.map(d => <option key={d.id} value={d.code}>{d.name}</option>)}
+            </select>
+            <input type="number" placeholder="Semester (Optional)" className="p-3 rounded-xl border border-slate-200 outline-none focus:border-primary-500" value={formData.semester} onChange={e => setFormData({ ...formData, semester: e.target.value })} />
+          </div>
+          <button disabled={loading} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800">Add Course</button>
+        </form>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+            <tr>
+              <th className="px-6 py-4">Code</th>
+              <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">Dept</th>
+              <th className="px-6 py-4">Sem</th>
+              <th className="px-6 py-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {subjects.map(s => (
+              <tr key={s.id} className="hover:bg-slate-50">
+                <td className="px-6 py-4 font-bold">{s.code}</td>
+                <td className="px-6 py-4">
+                  {editingId === s.id ? (
+                    <input
+                      value={editForm.name}
+                      onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                      className="w-full p-1 border rounded"
+                    />
+                  ) : (
+                    s.name
+                  )}
+                </td>
+                <td className="px-6 py-4 text-xs font-semibold">{s.department}</td>
+                <td className="px-6 py-4 text-xs font-semibold">
+                  {editingId === s.id ? (
+                    <input
+                      type="number"
+                      value={editForm.semester}
+                      onChange={e => setEditForm({ ...editForm, semester: e.target.value })}
+                      className="w-16 p-1 border rounded"
+                    />
+                  ) : (
+                    s.semester || 'NA'
+                  )}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  {editingId === s.id ? (
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => handleUpdate(s.id)} className="text-emerald-600 font-bold hover:underline">Save</button>
+                      <button onClick={cancelEdit} className="text-slate-400 hover:text-slate-600">Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => startEdit(s)} className="text-blue-500 hover:text-blue-700 font-medium">Edit</button>
+                      <button onClick={() => handleDelete(s.id)} className="text-red-400 hover:text-red-600">Delete</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TimetableTab({ departments, staffList }) {
+  const [view, setView] = useState('depts');
+  const [selectedDept, setSelectedDept] = useState(null);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [classes, setClasses] = useState([]);
+  const [timetable, setTimetable] = useState({});
+  const [subjects, setSubjects] = useState([]);
+  const [editingSlot, setEditingSlot] = useState(null);
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const periods = [
+    { id: 1, time: '09:10 - 10:10' },
+    { id: 2, time: '10:10 - 11:10' },
+    { id: 'break1', label: 'Break', duration: '10m' },
+    { id: 3, time: '11:20 - 12:20' },
+    { id: 'lunch', label: 'Lunch', duration: '40m' },
+    { id: 4, time: '13:00 - 14:00' },
+    { id: 5, time: '14:00 - 15:00' },
+    { id: 'break2', label: 'Break', duration: '10m' },
+    { id: 6, time: '15:10 - 16:00' }
+  ];
+  const fetchClasses = async (code) => {
+    const res = await fetch(`http://localhost:5000/api/admin/classes?departmentCode=${code}`);
+    const data = await res.json();
+    setClasses(data.classes || []);
+  };
+  const fetchTimetable = async (classId) => {
+    const res = await fetch(`http://localhost:5000/api/admin/timetable?classId=${classId}`);
+    const data = await res.json();
+    const map = {};
+    (data.timetable || []).forEach(t => {
+      map[`${t.day_of_week}-${t.period}`] = t;
+    });
+    setTimetable(map);
+  };
+  const fetchSubjects = async (deptCode) => {
+    const res = await fetch(`http://localhost:5000/api/admin/subjects?departmentCode=${deptCode}`);
+    const data = await res.json();
+    setSubjects(data.subjects || []);
+  };
+  const handleUpdateSlot = async (subjectId, staffId) => {
+    if (!editingSlot) return;
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/timetable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          class_id: selectedClass.id,
+          day_of_week: editingSlot.day,
+          period: editingSlot.period,
+          subject_id: subjectId,
+          staff_id: staffId
+        })
+      });
+      if (res.ok) {
+        fetchTimetable(selectedClass.id);
+        setEditingSlot(null);
+      }
+    } catch (err) { alert('Update failed'); }
+  };
+  const handleReset = async () => {
+    if (!window.confirm('Reset entire timetable for this class?')) return;
+    await fetch(`http://localhost:5000/api/admin/timetable/${selectedClass.id}`, { method: 'DELETE' });
+    fetchTimetable(selectedClass.id);
+  };
+  if (view === 'depts') {
+    return (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {departments.map(dept => (
+          <div key={dept.id} onClick={() => { setSelectedDept(dept); fetchClasses(dept.code); setView('classes'); }} className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-8 shadow-sm hover:border-primary-500 transition-all text-center group">
+            <Building2 size={40} className="mx-auto mb-4 text-slate-400 group-hover:text-primary-500" />
+            <h3 className="font-bold text-slate-900">{dept.name}</h3>
+            <p className="text-xs text-slate-500 mt-2">{dept.code}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (view === 'classes') {
+    return (
+      <div className="space-y-6">
+        <button onClick={() => setView('depts')} className="flex items-center gap-2 text-primary-600 font-bold"><ChevronRight className="rotate-180" size={18} /> Back to Departments</button>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {classes.map(cls => (
+            <div key={cls.id} onClick={() => { setSelectedClass(cls); fetchTimetable(cls.id); fetchSubjects(selectedDept.code); setView('grid'); }} className="cursor-pointer p-6 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all">
+              <div className="font-bold">S{cls.semester} - {cls.name}</div>
+              <div className="text-xs text-slate-500 mt-1">Class Timetable</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <button onClick={() => setView('classes')} className="flex items-center gap-2 text-primary-600 font-bold"><ChevronRight className="rotate-180" size={18} /> Back to Classes</button>
+        <div className="flex gap-4">
+          <button onClick={handleReset} className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50">Reset Timetable</button>
+          <button className="px-6 py-2 rounded-xl bg-slate-900 text-white font-bold text-sm shadow-xl shadow-slate-200">Save Changes</button>
+        </div>
+      </div>
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-900 text-white">
+                <th className="px-4 py-6 text-left font-bold uppercase text-xs tracking-wider border-r border-slate-800">Day / Period</th>
+                {periods.map((p, idx) => (
+                  <th key={idx} className={`px-4 py-6 text-center text-xs font-bold uppercase tracking-wider ${p.label ? 'bg-slate-800/50 w-20' : ''}`}>
+                    {p.time || p.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {days.map((day, dayIdx) => (
+                <tr key={dayIdx} className="border-b border-slate-100">
+                  <td className="px-4 py-8 bg-slate-50 font-bold text-slate-900 border-r border-slate-200">{day}</td>
+                  {periods.map((p, pIdx) => {
+                    if (p.label) return <td key={pIdx} className="bg-slate-50/50 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">{p.label}</td>;
+                    const slot = timetable[`${dayIdx}-${p.id}`];
+                    return (
+                      <td key={pIdx} className="p-2 border-r border-slate-100 min-w-[160px]">
+                        <div
+                          onClick={() => setEditingSlot({ day: dayIdx, period: p.id })}
+                          className={`h-full min-h-[100px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-3 transition-all cursor-pointer ${slot ? 'border-primary-100 bg-primary-50/30' : 'border-slate-100 hover:border-primary-200 hover:bg-slate-50'}`}
+                        >
+                          {slot ? (
+                            <>
+                              <div className="font-bold text-slate-900 text-sm text-center">{slot.subject?.name}</div>
+                              <div className="text-xs text-primary-600 font-bold mt-1 bg-white px-2 py-0.5 rounded-full shadow-sm">{slot.staff?.full_name}</div>
+                              <div className="text-[10px] text-slate-400 font-medium mt-2 uppercase tracking-tighter">{slot.subject?.code}</div>
+                            </>
+                          ) : (
+                            <Plus size={20} className="text-slate-300" />
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {editingSlot && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+            <h4 className="text-xl font-bold mb-6 text-slate-900">Assign Slot</h4>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
+                <select id="subSelect" className="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-primary-500 font-medium">
+                  <option value="">Select Subject</option>
+                  {subjects.map(s => <option key={s.id} value={s.id}>{s.code} - {s.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Lecturer</label>
+                <select id="staffSelect" className="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-primary-500 font-medium">
+                  <option value="">Select Lecturer</option>
+                  {staffList.filter(s => s.deptCode === selectedDept.code).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => setEditingSlot(null)} className="flex-1 py-4 font-bold text-slate-500 rounded-2xl hover:bg-slate-50">Cancel</button>
+                <button onClick={() => handleUpdateSlot(document.getElementById('subSelect').value, document.getElementById('staffSelect').value)} className="flex-1 py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl shadow-slate-200 hover:bg-slate-800">Assign</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

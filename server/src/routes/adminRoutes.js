@@ -29,6 +29,7 @@ router.delete('/classes/:id', adminController.deleteClass);
 // Subjects
 router.get('/subjects', adminController.listSubjects);
 router.post('/subjects', adminController.createSubject);
+router.put('/subjects/:id', adminController.updateSubject);
 router.delete('/subjects/:id', adminController.deleteSubject);
 
 // Timetable

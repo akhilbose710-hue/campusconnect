@@ -59,7 +59,8 @@ exports.createUser = async (req, res, next) => {
                 user_id: userId,
                 admission_number: metadata.admissionNo || `ENR-${Date.now()}`,
                 department: metadata.departmentCode,
-                class_id: metadata.class_id
+                class_id: metadata.class_id,
+                semester: metadata.semester
             }]);
         } else if (role !== 'SUPER_ADMIN') {
             await supabaseAdmin.from('staff').insert([{
@@ -105,7 +106,8 @@ exports.bulkCreateUsers = async (req, res, next) => {
                         user_id: userId,
                         admission_number: user.metadata?.admissionNo || `ENR-${Date.now()}`,
                         department: user.metadata?.departmentCode,
-                        class_id: user.metadata?.class_id
+                        class_id: user.metadata?.class_id,
+                        semester: user.metadata?.semester
                     }]);
                 } else if (user.role !== 'SUPER_ADMIN') {
                     await supabaseAdmin.from('staff').insert([{
@@ -209,6 +211,23 @@ exports.deleteSubject = async (req, res, next) => {
         const { error } = await supabaseAdmin.from('subjects').delete().eq('id', id);
         if (error) throw error;
         res.json({ message: 'Subject deleted' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.updateSubject = async (req, res, next) => {
+    if (!ensureAdmin(res)) return;
+    try {
+        const { id } = req.params;
+        const { name, semester } = req.body;
+        const { data, error } = await supabaseAdmin.from('subjects')
+            .update({ name, semester })
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+        res.json({ message: 'Subject updated', subject: data[0] });
     } catch (error) {
         next(error);
     }

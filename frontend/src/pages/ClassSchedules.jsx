@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { CalendarDays, Clock, MapPin, User } from 'lucide-react';
+import { CalendarDays, Users } from 'lucide-react';
 
 export default function ClassSchedules() {
     const { user } = useAuth();
@@ -25,12 +25,21 @@ export default function ClassSchedules() {
         }
     };
 
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    // Assuming periods 1-6 for now, or determining max period from data
-    const periods = [1, 2, 3, 4, 5, 6];
+    const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const PERIODS = [
+        { id: 1, time: '09:10 - 10:10' },
+        { id: 2, time: '10:10 - 11:10' },
+        { id: 'break1', label: 'Break' },
+        { id: 3, time: '11:20 - 12:20' },
+        { id: 'lunch', label: 'Lunch' },
+        { id: 4, time: '13:00 - 14:00' },
+        { id: 5, time: '14:00 - 15:00' },
+        { id: 'break2', label: 'Break' },
+        { id: 6, time: '15:10 - 16:00' }
+    ];
 
-    const getSlot = (day, period) => {
-        return timetable.find(t => t.day_of_week === day && t.period === period);
+    const getSlot = (dayIdx, periodId) => {
+        return timetable.find(t => t.day_of_week === dayIdx && t.period === periodId);
     };
 
     if (loading) return (
@@ -40,56 +49,58 @@ export default function ClassSchedules() {
     );
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 font-sans">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="h-12 w-12 rounded-2xl bg-primary-100 flex items-center justify-center text-primary-600">
-                    <CalendarDays size={24} />
+        <div className="space-y-8 animate-in fade-in duration-500 font-sans">
+            <div className="flex items-center gap-4 mb-6">
+                <div className="h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 shadow-sm border border-primary-100">
+                    <CalendarDays size={28} />
                 </div>
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Weekly Timetable</h1>
-                    <p className="text-slate-500 font-medium">Your class schedule for the semester</p>
+                    <p className="text-slate-500 font-medium">Detailed schedule for the current semester</p>
                 </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden ring-1 ring-slate-100/50">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-600">
-                        <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                            <tr>
-                                <th className="px-6 py-4 font-black tracking-widest text-primary-900/50 w-24">Period</th>
-                                {days.map(day => (
-                                    <th key={day} className="px-6 py-4 font-bold tracking-wider min-w-[160px]">{day}</th>
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50/50 border-b border-slate-100">
+                                <th className="p-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 w-28 border-r border-slate-100">Day</th>
+                                {PERIODS.map((p, idx) => (
+                                    <th key={idx} className="p-5 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center border-r border-slate-100 last:border-r-0 min-w-[120px]">
+                                        <div className="font-bold text-slate-700">{p.label || `Period ${p.id}`}</div>
+                                        {p.time && <div className="text-[10px] text-slate-400 font-normal mt-0.5">{p.time}</div>}
+                                    </th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {periods.map(period => (
-                                <tr key={period} className="group hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4 font-black text-slate-300 group-hover:text-primary-300 text-lg">
-                                        P{period}
-                                    </td>
-                                    {days.map(day => {
-                                        const slot = getSlot(day, period);
+                            {DAYS.map((day, dIdx) => (
+                                <tr key={day} className="group hover:bg-slate-50/50 transition-colors">
+                                    <td className="p-5 font-bold text-slate-600 text-[11px] uppercase tracking-wider border-r border-slate-100 bg-slate-50/20">{day}</td>
+                                    {PERIODS.map((p, pIdx) => {
+                                        if (p.label) return <td key={pIdx} className="bg-slate-50/50 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest writing-vertical-lr select-none">{p.label}</td>;
+
+                                        const slot = getSlot(dIdx, p.id);
                                         return (
-                                            <td key={`${day}-${period}`} className="px-6 py-4 align-top">
+                                            <td key={pIdx} className="p-3 border-r border-slate-100 last:border-r-0 h-32 min-w-[160px]">
                                                 {slot ? (
-                                                    <div className="rounded-lg bg-primary-50/50 border border-primary-100 p-3 hover:bg-primary-50 hover:border-primary-200 transition-all cursor-default">
-                                                        <div className="font-bold text-slate-800 text-sm mb-1">{slot.subject?.name || 'Subject'}</div>
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary-600 uppercase tracking-wider">
-                                                                {slot.subject?.code}
+                                                    <div className="w-full h-full p-4 rounded-2xl bg-white text-left border border-slate-200 hover:border-primary-400 hover:shadow-xl hover:shadow-primary-100 hover:scale-[1.03] transition-all relative overflow-hidden ring-0 hover:ring-2 hover:ring-primary-100 group/slot">
+                                                        <div className="text-[9px] font-black text-primary-600 uppercase tracking-tighter mb-1.5 flex items-center gap-1">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-primary-500" />
+                                                            {slot.subject?.code}
+                                                        </div>
+                                                        <div className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug mb-3">{slot.subject?.name}</div>
+                                                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-tight mt-auto">
+                                                            <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg text-slate-600 group-hover/slot:bg-primary-50 group-hover/slot:text-primary-700 transition-colors">
+                                                                <Users size={12} />
+                                                                {slot.staff?.full_name || 'TBA'}
                                                             </div>
-                                                            {slot.staff?.full_name && (
-                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                                                    <User size={10} />
-                                                                    <span className="truncate max-w-[120px]">{slot.staff.full_name}</span>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="h-full min-h-[80px] rounded-lg border-2 border-dashed border-slate-100 flex items-center justify-center">
-                                                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Free</span>
+                                                    <div className="w-full h-full border-2 border-dashed border-slate-100 rounded-2xl flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
+                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Free</span>
                                                     </div>
                                                 )}
                                             </td>
