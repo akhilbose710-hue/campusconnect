@@ -6,7 +6,7 @@ const { requestLogger } = require('./utils/logger');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler');
 const sanitize = require('./middlewares/sanitize');
 const { apiLimiter } = require('./middlewares/rateLimit');
-const authRoutes = require('./routes/authRoutes');
+// app.use('/api/auth', authRoutes); // Auth handled by Supabase
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');
@@ -38,7 +38,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
+// app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/devices', deviceRoutes);

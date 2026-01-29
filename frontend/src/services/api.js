@@ -5,8 +5,10 @@ const api = axios.create({
   baseURL: API_BASE_URL
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('cc_access_token');
+api.interceptors.request.use(async (config) => {
+  const { data: { session } } = await import('../supabase').then(m => m.supabase.auth.getSession());
+  const token = session?.access_token;
+
   if (token) {
     // eslint-disable-next-line no-param-reassign
     config.headers.Authorization = `Bearer ${token}`;

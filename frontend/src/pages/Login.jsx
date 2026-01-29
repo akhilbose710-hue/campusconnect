@@ -15,13 +15,21 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      console.log('Attempting login...');
+      const { user } = await login(email, password);
+      console.log('Login successful, navigating...', user);
+
+      // Short delay to ensure state updates propagate if needed
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 100);
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-    } finally {
-      setLoading(false);
+      console.error('Login Error:', err);
+      // Supabase errors usually have a 'message' property
+      setError(err.message || err.error_description || 'Login failed');
+      setLoading(false); // Only stop loading on error, otherwise keep it loading while we navigate
     }
+    // Remove "finally" to avoid resetting loading state before navigation completes
   };
 
   return (

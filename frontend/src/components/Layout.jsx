@@ -24,8 +24,13 @@ export default function Layout() {
   }
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      navigate('/login');
+    }
   };
 
   return (
@@ -66,7 +71,7 @@ export default function Layout() {
           </div>
           <div className="flex flex-1 items-center justify-end gap-4">
             <div className="text-right text-xs">
-              <div className="font-semibold text-slate-900">{user?.name}</div>
+              <div className="font-semibold text-slate-900">{user?.user_metadata?.full_name || user?.name || user?.email}</div>
               <div className="text-slate-500">{primaryRole}</div>
             </div>
             <button

@@ -9,7 +9,7 @@ import Dashboard from './pages/Dashboard';
 import AttendanceView from './pages/AttendanceView';
 import StudentProfile from './pages/StudentProfile';
 import StaffProfile from './pages/StaffProfile';
-import AdminPanel from './pages\AdminPanel';
+import AdminPanel from './pages/AdminPanel';
 import DeviceManagement from './pages/DeviceManagement';
 import ReportsAnalytics from './pages/ReportsAnalytics';
 import Unauthorized from './pages/Unauthorized';
