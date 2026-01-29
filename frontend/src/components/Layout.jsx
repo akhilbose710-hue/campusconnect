@@ -63,13 +63,19 @@ export default function Layout() {
     }
   };
 
+  const isAdmin = roles.includes('SUPER_ADMIN') || roles.includes('IT_ADMIN');
+
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/attendance', label: 'Attendance', icon: CalendarCheck },
     { to: '/reports', label: 'Reports', icon: BarChart3 }
-  ].filter(item => !(isFaculty && (item.label === 'Dashboard' || item.label === 'Attendance')));
+  ].filter(item => {
+    if (isFaculty && (item.label === 'Dashboard' || item.label === 'Attendance')) return false;
+    if (isAdmin && (item.label === 'Dashboard' || item.label === 'Attendance')) return false;
+    return true;
+  });
 
-  if (roles.includes('SUPER_ADMIN') || roles.includes('IT_ADMIN')) {
+  if (isAdmin) {
     navItems.push({ to: '/admin?tab=overview', label: 'Overview', icon: LayoutDashboard });
     navItems.push({ to: '/admin?tab=users', label: 'All Users', icon: Users });
     navItems.push({ to: '/admin?tab=departments', label: 'Departments', icon: Building2 });
@@ -119,7 +125,7 @@ export default function Layout() {
               <Shield size={24} />
             </div>
             <div>
-              <div className="text-lg font-bold text-slate-900 leading-none">Campus</div>
+              <div className="text-lg font-bold text-slate-900 leading-none">Campus Connect</div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">{primaryRole || 'User'}</div>
             </div>
           </div>
